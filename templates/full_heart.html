@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% set page_type = "full" %}
+{% set chamber_key = "full" %}
+{% set title = "Full Heart — Global Overview" %}
+
+{% block content %}
+
+<!-- ── Row 1: Stat Cards ── -->
+<div class="stats-row">
+
+  <div class="stat-card lv-card">
+    <div class="stat-label">LV Pressure</div>
+    <div class="stat-value" style="color:var(--accent-blue)">
+      <span id="stat-lv-p">—</span>
+      <span class="stat-unit">mmHg</span>
+    </div>
+    <span id="badge-lv" class="stat-badge badge-normal">NORMAL</span>
+  </div>
+
+  <div class="stat-card rv-card">
+    <div class="stat-label">RV Pressure</div>
+    <div class="stat-value" style="color:var(--accent-violet)">
+      <span id="stat-rv-p">—</span>
+      <span class="stat-unit">mmHg</span>
+    </div>
+    <span class="stat-badge badge-normal">NORMAL</span>
+  </div>
+
+  <div class="stat-card hr-card">
+    <div class="stat-label">Heart Rate</div>
+    <div class="stat-value" style="color:var(--accent-green)">
+      <span id="stat-hr">—</span>
+      <span class="stat-unit">BPM</span>
+    </div>
+    <span id="badge-hr" class="stat-badge badge-normal">NORMAL</span>
+  </div>
+
+  <div class="stat-card o2-card">
+    <div class="stat-label">O₂ Saturation</div>
+    <div class="stat-value" style="color:var(--accent-cyan)">
+      <span id="stat-o2">—</span>
+      <span class="stat-unit">%</span>
+    </div>
+    <span class="stat-badge badge-normal">NORMAL</span>
+  </div>
+
+</div>
+
+<!-- ── Row 2: Pressure & Volume Charts ── -->
+<div class="charts-grid">
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Chamber Pressure vs. Time</div>
+        <div class="panel-sub">Dynamic pressure loading profile — all chambers</div>
+      </div>
+      <div class="panel-legend">
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-blue)"></div>LV</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-violet)"></div>RV</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-green)"></div>LA</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-orange)"></div>RA</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="chart-pressure" class="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Chamber Volume vs. Time</div>
+        <div class="panel-sub">Volumetric distribution mapping — all chambers</div>
+      </div>
+      <div class="panel-legend">
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-blue)"></div>LV</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-violet)"></div>RV</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-green)"></div>LA</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--accent-orange)"></div>RA</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="chart-volume" class="chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Row 3: Flow + O2 charts ── -->
+<div class="charts-grid">
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Cardiac Output — Flow</div>
+        <div class="panel-sub">Left ventricle outflow (mL/s)</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:130px">
+      <canvas id="chart-flow" class="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">O₂ Delivery</div>
+        <div class="panel-sub">Systemic oxygen transport</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:130px">
+      <canvas id="chart-o2" class="chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Row 4: Phys params + Integrity ── -->
+<div class="bottom-row">
+
+  <!-- Physiological Parameters -->
+  <div class="panel" style="grid-column: span 2;">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Physiological Parameters</div>
+        <div class="panel-sub">Live pressure readings per chamber</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="phys-table">
+
+        <div class="phys-row">
+          <span class="phys-name">LV Pressure</span>
+          <div class="phys-bar-wrap">
+            <div class="phys-bar" id="bar-lv" style="width:0%;background:var(--accent-blue)"></div>
+          </div>
+          <span class="phys-val"><span id="stat-lv-p2" style="display:inline"></span> mmHg</span>
+        </div>
+
+        <div class="phys-row">
+          <span class="phys-name">RV Pressure</span>
+          <div class="phys-bar-wrap">
+            <div class="phys-bar" id="bar-rv" style="width:0%;background:var(--accent-violet)"></div>
+          </div>
+          <span class="phys-val"><span id="stat-rv-p2" style="display:inline"></span> mmHg</span>
+        </div>
+
+        <div class="phys-row">
+          <span class="phys-name">LA Pressure</span>
+          <div class="phys-bar-wrap">
+            <div class="phys-bar" id="bar-la" style="width:0%;background:var(--accent-green)"></div>
+          </div>
+          <span class="phys-val"><span id="stat-la-p" style="display:inline"></span> mmHg</span>
+        </div>
+
+        <div class="phys-row">
+          <span class="phys-name">RA Pressure</span>
+          <div class="phys-bar-wrap">
+            <div class="phys-bar" id="bar-ra" style="width:0%;background:var(--accent-orange)"></div>
+          </div>
+          <span class="phys-val"><span id="stat-ra-p" style="display:inline"></span> mmHg</span>
+        </div>
+
+        <div class="phys-row">
+          <span class="phys-name">Flow (LV out)</span>
+          <div class="phys-bar-wrap">
+            <div class="phys-bar" id="bar-flow" style="width:0%;background:var(--accent-cyan)"></div>
+          </div>
+          <span class="phys-val"><span id="stat-flow-b" style="display:inline"></span> mL/s</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Dataset Integrity -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Dataset Integrity</div>
+    </div>
+    <div class="panel-body">
+      <div class="integrity-table">
+        <div class="int-row">
+          <span class="int-key">Cardiac Output</span>
+          <span class="int-val"><span id="stat-co">—</span> L/min</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">LV Flow</span>
+          <span class="int-val"><span id="stat-flow">—</span> mL/s</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">O₂ (lung out)</span>
+          <span class="int-val"><span id="stat-o2b">—</span> %</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Protocol</span>
+          <span class="int-val">ISO-DT-1.0</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Sync Rate</span>
+          <span class="int-val">10 Hz</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Model</span>
+          <span class="int-val">Windkessel v2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

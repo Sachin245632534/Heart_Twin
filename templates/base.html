@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ title }} — Heart Digital Twin</title>
+  <meta name="description" content="Real-time hemodynamics digital twin dashboard — {{ title }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    window.PAGE_TYPE   = '{{ page_type }}';
+    window.CHAMBER_KEY = '{{ chamber_key }}';
+  </script>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">♥</div>
+      <div>
+        <div class="logo-text">CardioTwin</div>
+        <div class="logo-sub">Digital Heart Model</div>
+      </div>
+    </div>
+
+    <!-- Patient -->
+    <div class="patient-badge">
+      <div class="patient-id">PATIENT ID: DT-001</div>
+      <div class="patient-status">● LIVE SIMULATION</div>
+    </div>
+
+    <!-- Regional Views (navigation) -->
+    <div class="nav-section">
+      <div class="nav-label">Regional Views</div>
+
+      <a href="/" class="nav-item {% if chamber_key == 'full' %}active{% endif %}" id="nav-full">
+        <span class="nav-dot dot-full"></span>
+        Full Heart
+      </a>
+
+      <a href="/la" class="nav-item {% if chamber_key == 'la' %}active{% endif %}" id="nav-la">
+        <span class="nav-dot dot-la"></span>
+        LA — Left Atrium
+      </a>
+
+      <a href="/lv" class="nav-item {% if chamber_key == 'lv' %}active{% endif %}" id="nav-lv">
+        <span class="nav-dot dot-lv"></span>
+        LV — Left Ventricle
+      </a>
+
+      <a href="/ra" class="nav-item {% if chamber_key == 'ra' %}active{% endif %}" id="nav-ra">
+        <span class="nav-dot dot-ra"></span>
+        RA — Right Atrium
+      </a>
+
+      <a href="/rv" class="nav-item {% if chamber_key == 'rv' %}active{% endif %}" id="nav-rv">
+        <span class="nav-dot dot-rv"></span>
+        RV — Right Ventricle
+      </a>
+    </div>
+
+    <!-- Live Twin Controls -->
+    <div class="controls-section">
+      <div class="nav-label" style="margin-bottom:10px;">Live Twin Controls</div>
+
+      <!-- Heart Rate (global) -->
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          <span>Heart Rate</span>
+          <span id="disp-hr">75</span>
+        </div>
+        <input type="range" id="ctrl-hr"
+               min="40" max="160" step="1" value="75"
+               data-param="HR" data-chamber=""
+               data-display="disp-hr"/>
+      </div>
+
+      {% if chamber_key in ['lv', 'rv', 'la', 'ra'] %}
+      <!-- E_max (k1) -->
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          <span>E<sub>max</sub> (Contractility)</span>
+          <span id="disp-emax">{% if chamber_key == 'lv' %}2.5{% elif chamber_key == 'rv' %}3.0{% else %}1.5{% endif %}</span>
+        </div>
+        <input type="range" id="ctrl-emax"
+               min="0.5" max="6.0" step="0.1"
+               value="{% if chamber_key == 'lv' %}2.5{% elif chamber_key == 'rv' %}3.0{% else %}1.5{% endif %}"
+               data-param="k1" data-chamber="{{ chamber_key }}"
+               data-display="disp-emax"
+               class="{{ chamber_key }}-slider"/>
+      </div>
+
+      <!-- E_min (k2) -->
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          <span>E<sub>min</sub> (Stiffness)</span>
+          <span id="disp-emin">0.05</span>
+        </div>
+        <input type="range" id="ctrl-emin"
+               min="0.01" max="0.5" step="0.01" value="0.05"
+               data-param="k2" data-chamber="{{ chamber_key }}"
+               data-display="disp-emin"
+               class="{{ chamber_key }}-slider"/>
+      </div>
+
+      <!-- Resistance -->
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          <span>Resistance (R)</span>
+          <span id="disp-r">0.6</span>
+        </div>
+        <input type="range" id="ctrl-r"
+               min="0.1" max="3.0" step="0.05" value="0.6"
+               data-param="R" data-chamber="{{ chamber_key }}"
+               data-display="disp-r"
+               class="{{ chamber_key }}-slider"/>
+      </div>
+      {% else %}
+      <!-- Global: P_body, Lung efficiency -->
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          <span>Body Pressure</span>
+          <span id="disp-pb">10</span>
+        </div>
+        <input type="range" id="ctrl-pb"
+               min="5" max="120" step="1" value="10"
+               data-param="P_body" data-chamber=""
+               data-display="disp-pb"/>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          <span>Lung Efficiency</span>
+          <span id="disp-le">0.95</span>
+        </div>
+        <input type="range" id="ctrl-le"
+               min="0.5" max="1.0" step="0.01" value="0.95"
+               data-param="lung_efficiency" data-chamber=""
+               data-display="disp-le"/>
+      </div>
+      {% endif %}
+
+      <button class="export-btn" onclick="exportData()">⬇ Export Dataset</button>
+    </div>
+
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-title">{{ title }}</div>
+      <span class="topbar-badge">HEMODYNAMICS</span>
+      <span class="topbar-badge" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:var(--accent-violet);">
+        SIMULATION
+      </span>
+      <div id="ws-dot" class="ws-dot offline" title="WebSocket Status"></div>
+      <div id="topbar-clock" class="topbar-clock">—</div>
+    </header>
+
+    <!-- Injected page content -->
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+function exportData() {
+  const rows = [['time','lv_P','rv_P','la_P','ra_P','lv_V','rv_V','flow','o2']];
+  const n = window._hist?.t?.length ?? 0;
+  for (let i = 0; i < n; i++) {
+    rows.push([
+      window._hist?.t?.[i] ?? '',
+      window._hist?.lv_P?.[i] ?? '',
+      window._hist?.rv_P?.[i] ?? '',
+      window._hist?.la_P?.[i] ?? '',
+      window._hist?.ra_P?.[i] ?? '',
+      window._hist?.lv_V?.[i] ?? '',
+      window._hist?.rv_V?.[i] ?? '',
+      window._hist?.flow?.[i] ?? '',
+      window._hist?.o2?.[i] ?? '',
+    ]);
+  }
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cardiac_twin_export.csv';
+  a.click();
+}
+// expose hist for export
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire hist exposure after module init
+  setTimeout(() => { window._hist = window.hist ?? {}; }, 500);
+});
+</script>
+</body>
+</html>

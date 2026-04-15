@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% set page_type = "chamber" %}
+
+{% block content %}
+
+{# ── Accent color per chamber ── #}
+{% if chamber_key == 'lv' %}
+  {% set accent = 'var(--accent-blue)' %}
+  {% set accent_class = 'chamber-accent-lv' %}
+  {% set full_name = 'Left Ventricle' %}
+  {% set p_normal_lo = 80 %} {% set p_normal_hi = 130 %}
+  {% set v_label = 'End-diastolic Volume' %}
+{% elif chamber_key == 'rv' %}
+  {% set accent = 'var(--accent-violet)' %}
+  {% set accent_class = 'chamber-accent-rv' %}
+  {% set full_name = 'Right Ventricle' %}
+  {% set p_normal_lo = 15 %} {% set p_normal_hi = 30 %}
+  {% set v_label = 'RV Volume' %}
+{% elif chamber_key == 'la' %}
+  {% set accent = 'var(--accent-green)' %}
+  {% set accent_class = 'chamber-accent-la' %}
+  {% set full_name = 'Left Atrium' %}
+  {% set p_normal_lo = 6 %} {% set p_normal_hi = 12 %}
+  {% set v_label = 'LA Volume' %}
+{% elif chamber_key == 'ra' %}
+  {% set accent = 'var(--accent-orange)' %}
+  {% set accent_class = 'chamber-accent-ra' %}
+  {% set full_name = 'Right Atrium' %}
+  {% set p_normal_lo = 2 %} {% set p_normal_hi = 6 %}
+  {% set v_label = 'RA Volume' %}
+{% endif %}
+
+<!-- ── Chamber header banner ── -->
+<div class="panel" style="border-color:{{ accent }}33; background: linear-gradient(135deg, {{ accent }}0a, transparent);">
+  <div class="panel-body" style="display:flex;align-items:center;gap:18px;padding:14px 16px;">
+    <div style="font-size:36px;filter:drop-shadow(0 0 10px {{ accent }});">♥</div>
+    <div>
+      <div style="font-size:18px;font-weight:700;color:{{ accent }}">{{ full_name }}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+        Real-time hemodynamic simulation — windkessel elastance model
+      </div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-size:10px;color:var(--text-muted);">HEART RATE</div>
+      <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-green);">
+        <span id="stat-hr">—</span> <span style="font-size:13px;font-weight:400;color:var(--text-secondary);">BPM</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stat cards ── -->
+<div class="stats-row">
+
+  <div class="stat-card" style="border-bottom-color:{{ accent }}">
+    <div class="stat-label">Pressure</div>
+    <div class="stat-value" style="color:{{ accent }}">
+      <span id="stat-chamber-p">—</span>
+      <span class="stat-unit">mmHg</span>
+    </div>
+    <span id="badge-chamber-p" class="stat-badge badge-normal">NORMAL</span>
+  </div>
+
+  <div class="stat-card" style="border-bottom-color:{{ accent }}">
+    <div class="stat-label">Volume</div>
+    <div class="stat-value" style="color:{{ accent }}">
+      <span id="stat-chamber-v">—</span>
+      <span class="stat-unit">mL</span>
+    </div>
+    <span class="stat-badge badge-normal">TRACKING</span>
+  </div>
+
+  <div class="stat-card" style="border-bottom-color:var(--accent-cyan)">
+    <div class="stat-label">Flow Out</div>
+    <div class="stat-value" style="color:var(--accent-cyan)">
+      <span id="stat-chamber-q">—</span>
+      <span class="stat-unit">mL/s</span>
+    </div>
+    <span class="stat-badge badge-normal">ACTIVE</span>
+  </div>
+
+  <div class="stat-card" style="border-bottom-color:var(--accent-green)">
+    <div class="stat-label">Activation</div>
+    <div class="stat-value" style="color:var(--accent-green)">
+      <span id="stat-chamber-a">—</span>
+    </div>
+    <span class="stat-badge badge-normal">CYCLING</span>
+  </div>
+
+</div>
+
+<!-- ── Pressure + Volume charts ── -->
+<div class="charts-grid">
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">{{ full_name }} — Pressure vs. Time</div>
+        <div class="panel-sub">Instantaneous pressure waveform</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="chart-chamber-p" class="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">{{ full_name }} — Volume vs. Time</div>
+        <div class="panel-sub">{{ v_label }} over time</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="chart-chamber-v" class="chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Flow + Activation charts ── -->
+<div class="charts-grid">
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Outflow vs. Time</div>
+        <div class="panel-sub">Downstream blood flow rate</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:130px">
+      <canvas id="chart-chamber-flow" class="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Activation Function</div>
+        <div class="panel-sub">Normalized contractile state (0 → 1)</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:130px">
+      <canvas id="chart-chamber-act" class="chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Chamber info + PV Context ── -->
+<div class="bottom-row" style="grid-template-columns:1fr 1fr;">
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Chamber Details</div>
+    </div>
+    <div class="panel-body">
+      <div class="integrity-table">
+        <div class="int-row">
+          <span class="int-key">Chamber</span>
+          <span class="int-val" style="color:{{ accent }}">{{ full_name }}</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Model</span>
+          <span class="int-val">Elastance (Windkessel)</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Normal P range</span>
+          <span class="int-val">{{ p_normal_lo }}–{{ p_normal_hi }} mmHg</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Pressure</span>
+          <span class="int-val"><span id="detail-p">—</span> mmHg</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Volume</span>
+          <span class="int-val"><span id="detail-v">—</span> mL</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Flow out</span>
+          <span class="int-val"><span id="detail-q">—</span> mL/s</span>
+        </div>
+        <div class="int-row">
+          <span class="int-key">Activation</span>
+          <span class="int-val"><span id="detail-a">—</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Pressure–Volume Loop (Live)</div>
+      <div class="panel-sub">Last {{ "120" }} ticks rolling window</div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:200px">
+      <canvas id="chart-pv-loop" class="chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- PV Loop + detail panel middleware (runs after dashboard.js via registerDataMiddleware) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const KEY   = window.CHAMBER_KEY;
+  const COLOR = { lv:'#4f9cf9', rv:'#a78bfa', la:'#34d399', ra:'#fb923c' };
+  const color = COLOR[KEY] ?? '#4f9cf9';
+  const LO    = {{ p_normal_lo }};
+  const HI    = {{ p_normal_hi }};
+
+  const pvP = [], pvV = [];
+  const MAX_PV = 120;
+
+  // ── Build PV scatter chart
+  const canvas = document.getElementById('chart-pv-loop');
+  let pvChart = null;
+  if (canvas) {
+    pvChart = new Chart(canvas, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'P–V Loop',
+          data: [],
+          borderColor: color,
+          backgroundColor: color + '18',
+          pointRadius: 1.5,
+          pointBackgroundColor: color,
+          showLine: true,
+          tension: 0.3,
+          borderWidth: 1.5,
+        }]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: { title:{ display:true, text:'Volume (mL)', font:{size:9} }, grid:{ color:'rgba(99,120,180,0.07)' } },
+          y: { title:{ display:true, text:'Pressure (mmHg)', font:{size:9} }, grid:{ color:'rgba(99,120,180,0.07)' } }
+        }
+      }
+    });
+  }
+
+  // ── Register middleware (safe: called after dashboard.js onData runs)
+  window.registerDataMiddleware(function(data) {
+    const c = data[KEY];
+    if (!c) return;
+
+    pvP.push(c.P ?? 0);
+    pvV.push(c.V ?? 0);
+    if (pvP.length > MAX_PV) { pvP.shift(); pvV.shift(); }
+
+    // Detail panel
+    const fmt = (v, d=1) => v !== undefined ? Number(v).toFixed(d) : '—';
+    const s   = (id, v)  => { const e=document.getElementById(id); if(e) e.textContent=v; };
+
+    s('detail-p', fmt(c.P));
+    s('detail-v', fmt(c.V));
+    s('detail-q', fmt(c.Q_out));
+    s('detail-a', fmt(c.A, 3));
+
+    // Badge
+    const badge = document.getElementById('badge-chamber-p');
+    if (badge) {
+      const P = c.P ?? 0;
+      badge.className  = 'stat-badge ' + (P < LO ? 'badge-warn' : P > HI ? 'badge-high' : 'badge-normal');
+      badge.textContent = P < LO ? 'LOW' : P > HI ? 'HIGH' : 'NORMAL';
+    }
+
+    // PV loop
+    if (pvChart) {
+      pvChart.data.datasets[0].data = pvV.map((v, i) => ({ x: v, y: pvP[i] }));
+      pvChart.update('none');
+    }
+  });
+});
+</script>
+
+{% endblock %}
